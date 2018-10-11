@@ -176,18 +176,33 @@ func (a timeQuery) LookupIn(ctx context.Context, index *indexfile.IndexFile) (bp
 	if err != nil {
 		return nil, fmt.Errorf("could not parse basename %q: %v", last, err)
 	}
-	t := time.Unix(0, intval*1000) // converts micros -> nanos
+	fileTime := time.Unix(0, intval*1000) // converts micros -> nanos
+
 	// Note, we add a minute when doing 'before' queries and subtract a minute
 	// when doing 'after' queries, to make sure we actually get the time
 	// specified.
-	if !a[0].IsZero() && t.Before(a[0].Add(-time.Minute)) {
-		v(2, "time query skipping %q", index.Name())
+
+	// "after"
+	hasStartTime := !a[0].IsZero()
+	startTime := a[0].Add(-time.Minute)
+	// "before"
+	hasStopTime := !a[1].IsZero()
+	stopTime := a[1].Add(time.Minute)
+
+	if hasStartTime && hasStopTime {
+		// "between"
+		if fileTime.Before(startTime) || fileTime.After(stopTime) {
+			v(2, "time query \"between\" skipping %q", index.Name())
+			return base.NoPositions, nil
+		}
+	} else if hasStartTime && fileTime.Before(startTime) {
+		v(2, "time query \"after\" skipping %q", index.Name())
+		return base.NoPositions, nil
+	} else if hasStopTime && fileTime.After(stopTime) {
+		v(2, "time query \"before\" skipping %q", index.Name())
 		return base.NoPositions, nil
 	}
-	if !a[1].IsZero() && t.After(a[1].Add(time.Minute)) {
-		v(2, "time query skipping %q", index.Name())
-		return base.NoPositions, nil
-	}
+
 	v(2, "time query using %q", index.Name())
 	return base.AllPositions, nil
 }
