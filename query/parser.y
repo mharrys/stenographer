@@ -52,7 +52,7 @@ import (
 %type	<query>	top expr expr2
 %type <time> timestamp
 
-%token <str> HOST PORT PROTO AND OR NET MASK TCP UDP ICMP BEFORE AFTER IPP AGO VLAN MPLS
+%token <str> HOST PORT PROTO AND OR NET MASK TCP UDP ICMP BEFORE AFTER IPP AGO VLAN MPLS BETWEEN
 %token <ip> IP
 %token <num> NUM
 %token <dur> DURATION
@@ -158,6 +158,16 @@ expr2:
 	t[0] = $2
 	$$ = t
 }
+|   BETWEEN timestamp AND timestamp
+{
+	if $2.After($4) {
+		parserlex.Error(fmt.Sprintf("first timestamp %s must be less than or equal to second timestamp %s", $2, $4))
+	}
+	var t timeQuery
+	t[0] = $2
+	t[1] = $4
+	$$ = t
+}
 
 timestamp:
     TIME
@@ -216,6 +226,7 @@ var tokens = map[string]int{
  "proto": PROTO,
  "tcp": TCP,
  "udp": UDP,
+ "between": BETWEEN,
 }
 
 // Lex is called by the parser to get each new token.  This implementation

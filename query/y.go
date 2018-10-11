@@ -55,12 +55,16 @@ const IPP = 57358
 const AGO = 57359
 const VLAN = 57360
 const MPLS = 57361
-const IP = 57362
-const NUM = 57363
-const DURATION = 57364
-const TIME = 57365
+const BETWEEN = 57362
+const IP = 57363
+const NUM = 57364
+const DURATION = 57365
+const TIME = 57366
 
-var parserToknames = []string{
+var parserToknames = [...]string{
+	"$end",
+	"error",
+	"$unk",
 	"HOST",
 	"PORT",
 	"PROTO",
@@ -77,18 +81,23 @@ var parserToknames = []string{
 	"AGO",
 	"VLAN",
 	"MPLS",
+	"BETWEEN",
 	"IP",
 	"NUM",
 	"DURATION",
 	"TIME",
+	"'/'",
+	"'('",
+	"')'",
 }
-var parserStatenames = []string{}
+var parserStatenames = [...]string{}
 
 const parserEofCode = 1
 const parserErrCode = 2
-const parserMaxDepth = 200
+const parserInitialStackSize = 16
 
-//line parser.y:172
+//line parser.y:182
+
 func ipsFromNet(ip net.IP, mask net.IPMask) (from, to net.IP, _ error) {
 	if len(ip) != len(mask) || (len(ip) != 4 && len(ip) != 16) {
 		return nil, nil, fmt.Errorf("bad IP or mask: %v %v", ip, mask)
@@ -116,24 +125,25 @@ type parserLex struct {
 // tokens provides a simple map for adding new keywords and mapping them
 // to token types.
 var tokens = map[string]int{
-	"after":  AFTER,
-	"ago":    AGO,
-	"&&":     AND,
-	"and":    AND,
-	"before": BEFORE,
-	"host":   HOST,
-	"icmp":   ICMP,
-	"ip":     IPP,
-	"mask":   MASK,
-	"net":    NET,
-	"||":     OR,
-	"or":     OR,
-	"port":   PORT,
-	"vlan":   VLAN,
-	"mpls":   MPLS,
-	"proto":  PROTO,
-	"tcp":    TCP,
-	"udp":    UDP,
+	"after":   AFTER,
+	"ago":     AGO,
+	"&&":      AND,
+	"and":     AND,
+	"before":  BEFORE,
+	"host":    HOST,
+	"icmp":    ICMP,
+	"ip":      IPP,
+	"mask":    MASK,
+	"net":     NET,
+	"||":      OR,
+	"or":      OR,
+	"port":    PORT,
+	"vlan":    VLAN,
+	"mpls":    MPLS,
+	"proto":   PROTO,
+	"tcp":     TCP,
+	"udp":     UDP,
+	"between": BETWEEN,
 }
 
 // Lex is called by the parser to get each new token.  This implementation
@@ -234,99 +244,127 @@ func parse(in string) (Query, error) {
 }
 
 //line yacctab:1
-var parserExca = []int{
+var parserExca = [...]int{
 	-1, 1,
 	1, -1,
 	-2, 0,
 }
 
-const parserNprod = 20
 const parserPrivate = 57344
 
-var parserTokenNames []string
-var parserStates []string
+const parserLast = 44
 
-const parserLast = 46
+var parserAct = [...]int{
 
-var parserAct = []int{
-
-	4, 5, 27, 26, 33, 9, 36, 11, 12, 13,
-	14, 15, 8, 31, 6, 7, 16, 17, 32, 21,
-	20, 10, 19, 37, 23, 18, 3, 35, 2, 25,
-	16, 17, 22, 1, 0, 34, 0, 0, 0, 24,
-	0, 0, 0, 29, 30, 28,
+	26, 28, 27, 39, 35, 33, 17, 18, 22, 21,
+	20, 40, 24, 4, 5, 3, 29, 30, 9, 34,
+	11, 12, 13, 14, 15, 8, 36, 6, 7, 16,
+	37, 19, 2, 31, 32, 10, 17, 18, 38, 41,
+	23, 1, 0, 25,
 }
-var parserPact = []int{
+var parserPact = [...]int{
 
-	-4, -1000, 23, -1000, 5, 1, -1, -2, 26, 4,
-	-4, -1000, -1000, -1000, -20, -20, -4, -4, -1000, -1000,
-	-1000, -1000, -8, -6, 9, -1000, -1000, 10, -1000, -1000,
-	-1000, -1000, -15, 3, -1000, -1000, -1000, -1000,
+	9, -1000, 29, -1000, 10, -12, -13, -14, 34, -9,
+	9, -1000, -1000, -1000, -22, -22, -22, 9, 9, -1000,
+	-1000, -1000, -1000, -17, -6, -1, -1000, -1000, 13, -1000,
+	31, -1000, -1000, -1000, -19, -10, -1000, -1000, -22, -1000,
+	-1000, -1000,
 }
-var parserPgo = []int{
+var parserPgo = [...]int{
 
-	0, 33, 28, 26, 29,
+	0, 41, 32, 15, 0,
 }
-var parserR1 = []int{
+var parserR1 = [...]int{
 
 	0, 1, 2, 2, 2, 3, 3, 3, 3, 3,
-	3, 3, 3, 3, 3, 3, 3, 3, 4, 4,
+	3, 3, 3, 3, 3, 3, 3, 3, 3, 4,
+	4,
 }
-var parserR2 = []int{
+var parserR2 = [...]int{
 
 	0, 1, 1, 3, 3, 2, 2, 2, 2, 3,
-	4, 4, 3, 1, 1, 1, 2, 2, 1, 2,
+	4, 4, 3, 1, 1, 1, 2, 2, 4, 1,
+	2,
 }
-var parserChk = []int{
+var parserChk = [...]int{
 
 	-1000, -1, -2, -3, 4, 5, 18, 19, 16, 9,
-	25, 11, 12, 13, 14, 15, 7, 8, 20, 21,
-	21, 21, 6, 20, -2, -4, 23, 22, -4, -3,
-	-3, 21, 24, 10, 26, 17, 21, 20,
+	26, 11, 12, 13, 14, 15, 20, 7, 8, 21,
+	22, 22, 22, 6, 21, -2, -4, 24, 23, -4,
+	-4, -3, -3, 22, 25, 10, 27, 17, 7, 22,
+	21, -4,
 }
-var parserDef = []int{
+var parserDef = [...]int{
 
 	0, -2, 1, 2, 0, 0, 0, 0, 0, 0,
-	0, 13, 14, 15, 0, 0, 0, 0, 5, 6,
-	7, 8, 0, 0, 0, 16, 18, 0, 17, 3,
-	4, 9, 0, 0, 12, 19, 10, 11,
+	0, 13, 14, 15, 0, 0, 0, 0, 0, 5,
+	6, 7, 8, 0, 0, 0, 16, 19, 0, 17,
+	0, 3, 4, 9, 0, 0, 12, 20, 0, 10,
+	11, 18,
 }
-var parserTok1 = []int{
+var parserTok1 = [...]int{
 
 	1, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-	25, 26, 3, 3, 3, 3, 3, 24,
+	26, 27, 3, 3, 3, 3, 3, 25,
 }
-var parserTok2 = []int{
+var parserTok2 = [...]int{
 
 	2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
 	12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
-	22, 23,
+	22, 23, 24,
 }
-var parserTok3 = []int{
+var parserTok3 = [...]int{
 	0,
 }
+
+var parserErrorMessages = [...]struct {
+	state int
+	token int
+	msg   string
+}{}
 
 //line yaccpar:1
 
 /*	parser for yacc output	*/
 
-var parserDebug = 0
+var (
+	parserDebug        = 0
+	parserErrorVerbose = false
+)
 
 type parserLexer interface {
 	Lex(lval *parserSymType) int
 	Error(s string)
 }
 
+type parserParser interface {
+	Parse(parserLexer) int
+	Lookahead() int
+}
+
+type parserParserImpl struct {
+	lval  parserSymType
+	stack [parserInitialStackSize]parserSymType
+	char  int
+}
+
+func (p *parserParserImpl) Lookahead() int {
+	return p.char
+}
+
+func parserNewParser() parserParser {
+	return &parserParserImpl{}
+}
+
 const parserFlag = -1000
 
 func parserTokname(c int) string {
-	// 4 is TOKSTART above
-	if c >= 4 && c-4 < len(parserToknames) {
-		if parserToknames[c-4] != "" {
-			return parserToknames[c-4]
+	if c >= 1 && c-1 < len(parserToknames) {
+		if parserToknames[c-1] != "" {
+			return parserToknames[c-1]
 		}
 	}
 	return __yyfmt__.Sprintf("tok-%v", c)
@@ -341,51 +379,127 @@ func parserStatname(s int) string {
 	return __yyfmt__.Sprintf("state-%v", s)
 }
 
-func parserlex1(lex parserLexer, lval *parserSymType) int {
-	c := 0
-	char := lex.Lex(lval)
+func parserErrorMessage(state, lookAhead int) string {
+	const TOKSTART = 4
+
+	if !parserErrorVerbose {
+		return "syntax error"
+	}
+
+	for _, e := range parserErrorMessages {
+		if e.state == state && e.token == lookAhead {
+			return "syntax error: " + e.msg
+		}
+	}
+
+	res := "syntax error: unexpected " + parserTokname(lookAhead)
+
+	// To match Bison, suggest at most four expected tokens.
+	expected := make([]int, 0, 4)
+
+	// Look for shiftable tokens.
+	base := parserPact[state]
+	for tok := TOKSTART; tok-1 < len(parserToknames); tok++ {
+		if n := base + tok; n >= 0 && n < parserLast && parserChk[parserAct[n]] == tok {
+			if len(expected) == cap(expected) {
+				return res
+			}
+			expected = append(expected, tok)
+		}
+	}
+
+	if parserDef[state] == -2 {
+		i := 0
+		for parserExca[i] != -1 || parserExca[i+1] != state {
+			i += 2
+		}
+
+		// Look for tokens that we accept or reduce.
+		for i += 2; parserExca[i] >= 0; i += 2 {
+			tok := parserExca[i]
+			if tok < TOKSTART || parserExca[i+1] == 0 {
+				continue
+			}
+			if len(expected) == cap(expected) {
+				return res
+			}
+			expected = append(expected, tok)
+		}
+
+		// If the default action is to accept or reduce, give up.
+		if parserExca[i+1] != 0 {
+			return res
+		}
+	}
+
+	for i, tok := range expected {
+		if i == 0 {
+			res += ", expecting "
+		} else {
+			res += " or "
+		}
+		res += parserTokname(tok)
+	}
+	return res
+}
+
+func parserlex1(lex parserLexer, lval *parserSymType) (char, token int) {
+	token = 0
+	char = lex.Lex(lval)
 	if char <= 0 {
-		c = parserTok1[0]
+		token = parserTok1[0]
 		goto out
 	}
 	if char < len(parserTok1) {
-		c = parserTok1[char]
+		token = parserTok1[char]
 		goto out
 	}
 	if char >= parserPrivate {
 		if char < parserPrivate+len(parserTok2) {
-			c = parserTok2[char-parserPrivate]
+			token = parserTok2[char-parserPrivate]
 			goto out
 		}
 	}
 	for i := 0; i < len(parserTok3); i += 2 {
-		c = parserTok3[i+0]
-		if c == char {
-			c = parserTok3[i+1]
+		token = parserTok3[i+0]
+		if token == char {
+			token = parserTok3[i+1]
 			goto out
 		}
 	}
 
 out:
-	if c == 0 {
-		c = parserTok2[1] /* unknown char */
+	if token == 0 {
+		token = parserTok2[1] /* unknown char */
 	}
 	if parserDebug >= 3 {
-		__yyfmt__.Printf("lex %s(%d)\n", parserTokname(c), uint(char))
+		__yyfmt__.Printf("lex %s(%d)\n", parserTokname(token), uint(char))
 	}
-	return c
+	return char, token
 }
 
 func parserParse(parserlex parserLexer) int {
+	return parserNewParser().Parse(parserlex)
+}
+
+func (parserrcvr *parserParserImpl) Parse(parserlex parserLexer) int {
 	var parsern int
-	var parserlval parserSymType
 	var parserVAL parserSymType
-	parserS := make([]parserSymType, parserMaxDepth)
+	var parserDollar []parserSymType
+	_ = parserDollar // silence set and not used
+	parserS := parserrcvr.stack[:]
 
 	Nerrs := 0   /* number of errors */
 	Errflag := 0 /* error recovery flag */
 	parserstate := 0
-	parserchar := -1
+	parserrcvr.char = -1
+	parsertoken := -1 // parserrcvr.char translated into internal numbering
+	defer func() {
+		// Make sure we report no lookahead when not parsing.
+		parserstate = -1
+		parserrcvr.char = -1
+		parsertoken = -1
+	}()
 	parserp := -1
 	goto parserstack
 
@@ -398,7 +512,7 @@ ret1:
 parserstack:
 	/* put a state and value onto the stack */
 	if parserDebug >= 4 {
-		__yyfmt__.Printf("char %v in %v\n", parserTokname(parserchar), parserStatname(parserstate))
+		__yyfmt__.Printf("char %v in %v\n", parserTokname(parsertoken), parserStatname(parserstate))
 	}
 
 	parserp++
@@ -415,17 +529,18 @@ parsernewstate:
 	if parsern <= parserFlag {
 		goto parserdefault /* simple state */
 	}
-	if parserchar < 0 {
-		parserchar = parserlex1(parserlex, &parserlval)
+	if parserrcvr.char < 0 {
+		parserrcvr.char, parsertoken = parserlex1(parserlex, &parserrcvr.lval)
 	}
-	parsern += parserchar
+	parsern += parsertoken
 	if parsern < 0 || parsern >= parserLast {
 		goto parserdefault
 	}
 	parsern = parserAct[parsern]
-	if parserChk[parsern] == parserchar { /* valid shift */
-		parserchar = -1
-		parserVAL = parserlval
+	if parserChk[parsern] == parsertoken { /* valid shift */
+		parserrcvr.char = -1
+		parsertoken = -1
+		parserVAL = parserrcvr.lval
 		parserstate = parsern
 		if Errflag > 0 {
 			Errflag--
@@ -437,8 +552,8 @@ parserdefault:
 	/* default state action */
 	parsern = parserDef[parserstate]
 	if parsern == -2 {
-		if parserchar < 0 {
-			parserchar = parserlex1(parserlex, &parserlval)
+		if parserrcvr.char < 0 {
+			parserrcvr.char, parsertoken = parserlex1(parserlex, &parserrcvr.lval)
 		}
 
 		/* look through exception table */
@@ -451,7 +566,7 @@ parserdefault:
 		}
 		for xi += 2; ; xi += 2 {
 			parsern = parserExca[xi+0]
-			if parsern < 0 || parsern == parserchar {
+			if parsern < 0 || parsern == parsertoken {
 				break
 			}
 		}
@@ -464,11 +579,11 @@ parserdefault:
 		/* error ... attempt to resume parsing */
 		switch Errflag {
 		case 0: /* brand new error */
-			parserlex.Error("syntax error")
+			parserlex.Error(parserErrorMessage(parserstate, parsertoken))
 			Nerrs++
 			if parserDebug >= 1 {
 				__yyfmt__.Printf("%s", parserStatname(parserstate))
-				__yyfmt__.Printf(" saw %s\n", parserTokname(parserchar))
+				__yyfmt__.Printf(" saw %s\n", parserTokname(parsertoken))
 			}
 			fallthrough
 
@@ -496,12 +611,13 @@ parserdefault:
 
 		case 3: /* no shift yet; clobber input char */
 			if parserDebug >= 2 {
-				__yyfmt__.Printf("error recovery discards %s\n", parserTokname(parserchar))
+				__yyfmt__.Printf("error recovery discards %s\n", parserTokname(parsertoken))
 			}
-			if parserchar == parserEofCode {
+			if parsertoken == parserEofCode {
 				goto ret1
 			}
-			parserchar = -1
+			parserrcvr.char = -1
+			parsertoken = -1
 			goto parsernewstate /* try again in the same state */
 		}
 	}
@@ -516,6 +632,13 @@ parserdefault:
 	_ = parserpt // guard against "declared and not used"
 
 	parserp -= parserR2[parsern]
+	// parserp is now the index of $0. Perform the default action. Iff the
+	// reduced production is ε, $1 is possibly out of range.
+	if parserp+1 >= len(parserS) {
+		nyys := make([]parserSymType, len(parserS)*2)
+		copy(nyys, parserS)
+		parserS = nyys
+	}
 	parserVAL = parserS[parserp+1]
 
 	/* consult goto table to find next state */
@@ -535,124 +658,152 @@ parserdefault:
 	switch parsernt {
 
 	case 1:
+		parserDollar = parserS[parserpt-1 : parserpt+1]
 		//line parser.y:65
 		{
-			parserlex.(*parserLex).out = parserS[parserpt-0].query
+			parserlex.(*parserLex).out = parserDollar[1].query
 		}
-	case 2:
-		parserVAL.query = parserS[parserpt-0].query
 	case 3:
+		parserDollar = parserS[parserpt-3 : parserpt+1]
 		//line parser.y:72
 		{
-			parserVAL.query = intersectQuery{parserS[parserpt-2].query, parserS[parserpt-0].query}
+			parserVAL.query = intersectQuery{parserDollar[1].query, parserDollar[3].query}
 		}
 	case 4:
+		parserDollar = parserS[parserpt-3 : parserpt+1]
 		//line parser.y:76
 		{
-			parserVAL.query = unionQuery{parserS[parserpt-2].query, parserS[parserpt-0].query}
+			parserVAL.query = unionQuery{parserDollar[1].query, parserDollar[3].query}
 		}
 	case 5:
+		parserDollar = parserS[parserpt-2 : parserpt+1]
 		//line parser.y:82
 		{
-			parserVAL.query = ipQuery{parserS[parserpt-0].ip, parserS[parserpt-0].ip}
+			parserVAL.query = ipQuery{parserDollar[2].ip, parserDollar[2].ip}
 		}
 	case 6:
+		parserDollar = parserS[parserpt-2 : parserpt+1]
 		//line parser.y:86
 		{
-			if parserS[parserpt-0].num < 0 || parserS[parserpt-0].num >= 65536 {
-				parserlex.Error(fmt.Sprintf("invalid port %v", parserS[parserpt-0].num))
+			if parserDollar[2].num < 0 || parserDollar[2].num >= 65536 {
+				parserlex.Error(fmt.Sprintf("invalid port %v", parserDollar[2].num))
 			}
-			parserVAL.query = portQuery(parserS[parserpt-0].num)
+			parserVAL.query = portQuery(parserDollar[2].num)
 		}
 	case 7:
+		parserDollar = parserS[parserpt-2 : parserpt+1]
 		//line parser.y:93
 		{
-			if parserS[parserpt-0].num < 0 || parserS[parserpt-0].num >= 65536 {
-				parserlex.Error(fmt.Sprintf("invalid vlan %v", parserS[parserpt-0].num))
+			if parserDollar[2].num < 0 || parserDollar[2].num >= 65536 {
+				parserlex.Error(fmt.Sprintf("invalid vlan %v", parserDollar[2].num))
 			}
-			parserVAL.query = vlanQuery(parserS[parserpt-0].num)
+			parserVAL.query = vlanQuery(parserDollar[2].num)
 		}
 	case 8:
+		parserDollar = parserS[parserpt-2 : parserpt+1]
 		//line parser.y:100
 		{
-			if parserS[parserpt-0].num < 0 || parserS[parserpt-0].num >= (1<<20) {
-				parserlex.Error(fmt.Sprintf("invalid mpls %v", parserS[parserpt-0].num))
+			if parserDollar[2].num < 0 || parserDollar[2].num >= (1<<20) {
+				parserlex.Error(fmt.Sprintf("invalid mpls %v", parserDollar[2].num))
 			}
-			parserVAL.query = mplsQuery(parserS[parserpt-0].num)
+			parserVAL.query = mplsQuery(parserDollar[2].num)
 		}
 	case 9:
+		parserDollar = parserS[parserpt-3 : parserpt+1]
 		//line parser.y:107
 		{
-			if parserS[parserpt-0].num < 0 || parserS[parserpt-0].num >= 256 {
-				parserlex.Error(fmt.Sprintf("invalid proto %v", parserS[parserpt-0].num))
+			if parserDollar[3].num < 0 || parserDollar[3].num >= 256 {
+				parserlex.Error(fmt.Sprintf("invalid proto %v", parserDollar[3].num))
 			}
-			parserVAL.query = protocolQuery(parserS[parserpt-0].num)
+			parserVAL.query = protocolQuery(parserDollar[3].num)
 		}
 	case 10:
+		parserDollar = parserS[parserpt-4 : parserpt+1]
 		//line parser.y:114
 		{
-			mask := net.CIDRMask(parserS[parserpt-0].num, len(parserS[parserpt-2].ip)*8)
+			mask := net.CIDRMask(parserDollar[4].num, len(parserDollar[2].ip)*8)
 			if mask == nil {
-				parserlex.Error(fmt.Sprintf("bad cidr: %v/%v", parserS[parserpt-2].ip, parserS[parserpt-0].num))
+				parserlex.Error(fmt.Sprintf("bad cidr: %v/%v", parserDollar[2].ip, parserDollar[4].num))
 			}
-			from, to, err := ipsFromNet(parserS[parserpt-2].ip, mask)
+			from, to, err := ipsFromNet(parserDollar[2].ip, mask)
 			if err != nil {
 				parserlex.Error(err.Error())
 			}
 			parserVAL.query = ipQuery{from, to}
 		}
 	case 11:
+		parserDollar = parserS[parserpt-4 : parserpt+1]
 		//line parser.y:126
 		{
-			from, to, err := ipsFromNet(parserS[parserpt-2].ip, net.IPMask(parserS[parserpt-0].ip))
+			from, to, err := ipsFromNet(parserDollar[2].ip, net.IPMask(parserDollar[4].ip))
 			if err != nil {
 				parserlex.Error(err.Error())
 			}
 			parserVAL.query = ipQuery{from, to}
 		}
 	case 12:
+		parserDollar = parserS[parserpt-3 : parserpt+1]
 		//line parser.y:134
 		{
-			parserVAL.query = parserS[parserpt-1].query
+			parserVAL.query = parserDollar[2].query
 		}
 	case 13:
+		parserDollar = parserS[parserpt-1 : parserpt+1]
 		//line parser.y:138
 		{
 			parserVAL.query = protocolQuery(6)
 		}
 	case 14:
+		parserDollar = parserS[parserpt-1 : parserpt+1]
 		//line parser.y:142
 		{
 			parserVAL.query = protocolQuery(17)
 		}
 	case 15:
+		parserDollar = parserS[parserpt-1 : parserpt+1]
 		//line parser.y:146
 		{
 			parserVAL.query = protocolQuery(1)
 		}
 	case 16:
+		parserDollar = parserS[parserpt-2 : parserpt+1]
 		//line parser.y:150
 		{
 			var t timeQuery
-			t[1] = parserS[parserpt-0].time
+			t[1] = parserDollar[2].time
 			parserVAL.query = t
 		}
 	case 17:
+		parserDollar = parserS[parserpt-2 : parserpt+1]
 		//line parser.y:156
 		{
 			var t timeQuery
-			t[0] = parserS[parserpt-0].time
+			t[0] = parserDollar[2].time
 			parserVAL.query = t
 		}
 	case 18:
-		//line parser.y:164
+		parserDollar = parserS[parserpt-4 : parserpt+1]
+		//line parser.y:162
 		{
-			parserVAL.time = parserS[parserpt-0].time
+			if parserDollar[2].time.After(parserDollar[4].time) {
+				parserlex.Error(fmt.Sprintf("first timestamp %s must be less than or equal to second timestamp %s", parserDollar[2].time, parserDollar[4].time))
+			}
+			var t timeQuery
+			t[0] = parserDollar[2].time
+			t[1] = parserDollar[4].time
+			parserVAL.query = t
 		}
 	case 19:
-		//line parser.y:168
+		parserDollar = parserS[parserpt-1 : parserpt+1]
+		//line parser.y:174
 		{
-			parserVAL.time = parserlex.(*parserLex).now.Add(-parserS[parserpt-1].dur)
+			parserVAL.time = parserDollar[1].time
+		}
+	case 20:
+		parserDollar = parserS[parserpt-2 : parserpt+1]
+		//line parser.y:178
+		{
+			parserVAL.time = parserlex.(*parserLex).now.Add(-parserDollar[1].dur)
 		}
 	}
 	goto parserstack /* stack new state and value */
