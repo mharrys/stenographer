@@ -220,6 +220,6 @@ func (a timeQuery) base() bool { return true }
 //
 // Currently, we support one simple method of parsing a query, detailed in the
 // README.md file.  Returns an error if the query string is invalid.
-func NewQuery(query string) (Query, error) {
+func NewQuery(query string) (Query, time.Time, time.Time, error) {
 	return parse(query)
 }

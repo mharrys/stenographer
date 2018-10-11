@@ -91,7 +91,7 @@ func (e *Env) handleQuery(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "could not read request body", http.StatusBadRequest)
 		return
 	}
-	q, err := query.NewQuery(string(queryBytes))
+	q, _, _, err := query.NewQuery(string(queryBytes))
 	if err != nil {
 		http.Error(w, "could not parse query", http.StatusBadRequest)
 		return

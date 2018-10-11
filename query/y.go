@@ -96,8 +96,7 @@ const parserEofCode = 1
 const parserErrCode = 2
 const parserInitialStackSize = 16
 
-//line parser.y:182
-
+//line parser.y:185
 func ipsFromNet(ip net.IP, mask net.IPMask) (from, to net.IP, _ error) {
 	if len(ip) != len(mask) || (len(ip) != 4 && len(ip) != 16) {
 		return nil, nil, fmt.Errorf("bad IP or mask: %v %v", ip, mask)
@@ -115,11 +114,13 @@ func ipsFromNet(ip net.IP, mask net.IPMask) (from, to net.IP, _ error) {
 // It must be named <prefix>Lex (where prefix is passed into go tool yacc with
 // the -p flag).
 type parserLex struct {
-	now time.Time // guarantees consistent time differences
-	in  string
-	pos int
-	out Query
-	err error
+	now       time.Time // guarantees consistent time differences
+	in        string
+	pos       int
+	out       Query
+	err       error
+	startTime time.Time
+	stopTime  time.Time
 }
 
 // tokens provides a simple map for adding new keywords and mapping them
@@ -232,15 +233,33 @@ func (x *parserLex) Error(s string) {
 		x.err = fmt.Errorf("%v at character %v (%q HERE %q)", s, x.pos, x.in[:x.pos], x.in[x.pos:])
 	}
 }
+func (x *parserLex) HandleBetween(startTime time.Time, stopTime time.Time) {
+	if x.startTime.IsZero() || x.startTime.After(startTime) {
+		x.startTime = startTime
+	}
+	if x.stopTime.IsZero() || x.stopTime.Before(stopTime) {
+		x.stopTime = stopTime
+	}
+}
+func (x *parserLex) HandleAfter(after time.Time) {
+	if x.startTime.IsZero() || x.startTime.After(after) {
+		x.startTime = after
+	}
+}
+func (x *parserLex) HandleBefore(before time.Time) {
+	if x.stopTime.IsZero() || x.stopTime.Before(before) {
+		x.stopTime = before
+	}
+}
 
 // parse parses an input string into a Query.
-func parse(in string) (Query, error) {
-	lex := &parserLex{in: in, now: time.Now()}
+func parse(in string) (Query, time.Time, time.Time, error) {
+	lex := &parserLex{in: in, now: time.Now(), startTime: time.Time{}, stopTime: time.Time{}}
 	parserParse(lex)
 	if lex.err != nil {
-		return nil, lex.err
+		return nil, time.Time{}, time.Time{}, lex.err
 	}
-	return lex.out, nil
+	return lex.out, lex.startTime, lex.stopTime, nil
 }
 
 //line yacctab:1
@@ -338,6 +357,9 @@ var (
 type parserLexer interface {
 	Lex(lval *parserSymType) int
 	Error(s string)
+	HandleBetween(startTime time.Time, stopTime time.Time)
+	HandleAfter(after time.Time)
+	HandleBefore(before time.Time)
 }
 
 type parserParser interface {
@@ -769,25 +791,28 @@ parserdefault:
 		parserDollar = parserS[parserpt-2 : parserpt+1]
 		//line parser.y:150
 		{
+			parserlex.HandleBefore(parserDollar[2].time)
 			var t timeQuery
 			t[1] = parserDollar[2].time
 			parserVAL.query = t
 		}
 	case 17:
 		parserDollar = parserS[parserpt-2 : parserpt+1]
-		//line parser.y:156
+		//line parser.y:157
 		{
+			parserlex.HandleAfter(parserDollar[2].time)
 			var t timeQuery
 			t[0] = parserDollar[2].time
 			parserVAL.query = t
 		}
 	case 18:
 		parserDollar = parserS[parserpt-4 : parserpt+1]
-		//line parser.y:162
+		//line parser.y:164
 		{
 			if parserDollar[2].time.After(parserDollar[4].time) {
 				parserlex.Error(fmt.Sprintf("first timestamp %s must be less than or equal to second timestamp %s", parserDollar[2].time, parserDollar[4].time))
 			}
+			parserlex.HandleBetween(parserDollar[2].time, parserDollar[4].time)
 			var t timeQuery
 			t[0] = parserDollar[2].time
 			t[1] = parserDollar[4].time
@@ -795,13 +820,13 @@ parserdefault:
 		}
 	case 19:
 		parserDollar = parserS[parserpt-1 : parserpt+1]
-		//line parser.y:174
+		//line parser.y:177
 		{
 			parserVAL.time = parserDollar[1].time
 		}
 	case 20:
 		parserDollar = parserS[parserpt-2 : parserpt+1]
-		//line parser.y:178
+		//line parser.y:181
 		{
 			parserVAL.time = parserlex.(*parserLex).now.Add(-parserDollar[1].dur)
 		}

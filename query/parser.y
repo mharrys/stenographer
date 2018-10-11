@@ -148,12 +148,14 @@ expr2:
 }
 |   BEFORE timestamp
 {
+	parserlex.HandleBefore($2)
 	var t timeQuery
 	t[1] = $2
 	$$ = t
 }
 |   AFTER timestamp
 {
+	parserlex.HandleAfter($2)
 	var t timeQuery
 	t[0] = $2
 	$$ = t
@@ -163,6 +165,7 @@ expr2:
 	if $2.After($4) {
 		parserlex.Error(fmt.Sprintf("first timestamp %s must be less than or equal to second timestamp %s", $2, $4))
 	}
+	parserlex.HandleBetween($2, $4)
 	var t timeQuery
 	t[0] = $2
 	t[1] = $4
@@ -203,6 +206,8 @@ type parserLex struct {
 	pos int
 	out Query
 	err error
+	startTime time.Time
+	stopTime time.Time
 }
 
 // tokens provides a simple map for adding new keywords and mapping them
@@ -313,13 +318,31 @@ func (x *parserLex) Error(s string) {
 		x.err = fmt.Errorf("%v at character %v (%q HERE %q)", s, x.pos, x.in[:x.pos], x.in[x.pos:])
 	}
 }
+func (x *parserLex) HandleBetween(startTime time.Time, stopTime time.Time) {
+	if x.startTime.IsZero() || x.startTime.After(startTime) {
+		x.startTime = startTime
+	}
+	if x.stopTime.IsZero() || x.stopTime.Before(stopTime) {
+		x.stopTime = stopTime
+	}
+}
+func (x *parserLex) HandleAfter(after time.Time) {
+	if x.startTime.IsZero() || x.startTime.After(after) {
+		x.startTime = after
+	}
+}
+func (x *parserLex) HandleBefore(before time.Time) {
+	if x.stopTime.IsZero() || x.stopTime.Before(before) {
+		x.stopTime = before
+	}
+}
 
 // parse parses an input string into a Query.
-func parse(in string) (Query, error) {
-	lex := &parserLex{in: in, now: time.Now()}
+func parse(in string) (Query, time.Time, time.Time, error) {
+	lex := &parserLex{in: in, now: time.Now(), startTime: time.Time{}, stopTime: time.Time{}}
 	parserParse(lex)
 	if lex.err != nil {
-		return nil, lex.err
+		return nil, time.Time{}, time.Time{}, lex.err
 	}
-	return lex.out, nil
+	return lex.out, lex.startTime, lex.stopTime, nil
 }
