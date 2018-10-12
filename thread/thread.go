@@ -203,6 +203,11 @@ func (t *Thread) cleanUpOnLowDiskSpace() {
 			v(1, "Thread %v disk space is sufficient (packet path=%q): %d%% free > %d%% threshold", t.id, t.packetPath, df, t.conf.DiskFreePercentage)
 			return
 		}
+		// Check if there's still files left on the thread to clean up, if not leave the loop
+		if len(t.files) == 0 {
+			v(1, "Thread %v has no files, nothing to clean up", t.id)
+			return
+		}
 		v(0, "Thread %v disk usage is high (packet path=%q): %d%% free <= %d%% threshold", t.id, t.packetPath, df, t.conf.DiskFreePercentage)
 		// Delete enough files to match newest file size.
 		t.pruneOldestThreadFiles()
