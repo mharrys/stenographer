@@ -16,7 +16,6 @@ package query
 
 import (
 	"testing"
-        "time"
 )
 
 func TestParsingValidQueries(t *testing.T) {
