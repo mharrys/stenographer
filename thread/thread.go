@@ -289,7 +289,7 @@ func (t *Thread) getSortedFiles() []string {
 }
 
 func (t *Thread) getSortedFilesInTimeSpan(q query.Query) []string {
-        // note that start, stop as 1 minute added/subtracted
+        // note that start, stop has 1 minute added/subtracted
         start, stop := q.GetTimeSpan(time.Time{}, time.Time{})
 
 	var sortedFiles []string
