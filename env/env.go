@@ -35,9 +35,11 @@ import (
 	"github.com/google/stenographer/config"
 	"github.com/google/stenographer/filecache"
 	"github.com/google/stenographer/httputil"
-	"github.com/google/stenographer/query"
+	//"github.com/google/stenographer/query"
+        "../query"
 	"github.com/google/stenographer/stats"
-	"github.com/google/stenographer/thread"
+	//"github.com/google/stenographer/thread"
+        "../thread"
 	"golang.org/x/net/context"
 )
 

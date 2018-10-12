@@ -28,7 +28,8 @@ import (
 	"github.com/google/stenographer/base"
 	"github.com/google/stenographer/filecache"
 	"github.com/google/stenographer/indexfile"
-	"github.com/google/stenographer/query"
+	//"github.com/google/stenographer/query"
+        "../query"
 	"github.com/google/stenographer/stats"
 	"golang.org/x/net/context"
 )

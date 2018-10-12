@@ -30,12 +30,14 @@ import (
 	"time"
 
 	"github.com/google/stenographer/base"
-	"github.com/google/stenographer/blockfile"
+	//"github.com/google/stenographer/blockfile"
+        "../blockfile"
 	"github.com/google/stenographer/config"
 	"github.com/google/stenographer/filecache"
 	"github.com/google/stenographer/httputil"
 	"github.com/google/stenographer/indexfile"
-	"github.com/google/stenographer/query"
+	//"github.com/google/stenographer/query"
+	"../query"
 	"github.com/google/stenographer/stats"
 	"golang.org/x/net/context"
 )
@@ -295,7 +297,7 @@ func (t *Thread) getSortedFilesInTimeSpan(q query.Query) []string {
                 // name contains timestamp
                 intval, err := strconv.ParseInt(name, 10, 64)
                 if err != nil {
-                        fmt.Errorf("could not parse basename %q: %v", last, err)
+                        fmt.Errorf("could not parse basename %q: %v", name, err)
                         continue
                 }
                 fileTime := time.Unix(0, intval*1000) // converts micros -> nanos
