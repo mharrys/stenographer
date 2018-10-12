@@ -294,15 +294,14 @@ func (t *Thread) getSortedFiles() []string {
 }
 
 func (t *Thread) getSortedFilesInTimeSpan(q query.Query) []string {
-        // note that start, stop has 1 minute added/subtracted
+        // note that start has 1 minute subtracted and stop has 1 minute added from the original query (if any)
         start, stop := q.GetTimeSpan(time.Time{}, time.Time{})
-
 	var sortedFiles []string
 	for name := range t.files {
                 // name contains timestamp
                 intval, err := strconv.ParseInt(name, 10, 64)
                 if err != nil {
-                        fmt.Errorf("could not parse basename %q: %v", name, err)
+                        fmt.Errorf("could not parse name %q: %v", name, err)
                         continue
                 }
                 fileTime := time.Unix(0, intval*1000) // converts micros -> nanos
