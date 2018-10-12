@@ -286,6 +286,36 @@ func (t *Thread) getSortedFiles() []string {
 	return sortedFiles
 }
 
+func (t *Thread) getSortedFilesInTimeSpan(q query.Query) []string {
+        // note that start, stop as 1 minute added/subtracted
+        start, stop := q.GetTimeSpan(time.Time{}, time.Time{})
+
+	var sortedFiles []string
+	for name := range t.files {
+                // name contains timestamp
+                intval, err := strconv.ParseInt(name, 10, 64)
+                if err != nil {
+                        fmt.Errorf("could not parse basename %q: %v", last, err)
+                        continue
+                }
+                fileTime := time.Unix(0, intval*1000) // converts micros -> nanos
+                // ensure files timestamp is within timespan (if any)
+                accept := true
+                if !start.IsZero() && fileTime.Before(start) {
+                        accept = false
+                }
+                if !stop.IsZero() && fileTime.After(stop) {
+                        accept = false
+                }
+                if accept {
+		        sortedFiles = append(sortedFiles, name)
+                }
+	}
+	// We guarantee elsewhere that filename ordering corresponds to creation ordering
+	sort.Strings(sortedFiles)
+	return sortedFiles
+}
+
 // OldestFileTimestamp returns timestamp of the oldest file we have.
 func (t *Thread) OldestFileTimestamp() time.Time {
 	t.mu.Lock()
@@ -334,7 +364,7 @@ func (t *Thread) Lookup(ctx context.Context, q query.Query) *base.PacketChan {
 	inputs := make(chan *base.PacketChan, concurrentBlockfileReadsPerThread)
 	out := base.ConcatPacketChans(ctx, inputs)
 	var files []*blockfile.BlockFile
-	for _, file := range t.getSortedFiles() {
+	for _, file := range t.getSortedFilesInTimeSpan(q) {
 		files = append(files, t.files[file])
 	}
 	t.mu.RUnlock()
