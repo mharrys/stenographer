@@ -314,9 +314,11 @@ func (t *Thread) getSortedFilesInTimeSpan(q query.Query) []string {
                         accept = false
                 }
                 if accept {
+	                v(3, "File %s within timespan %v -> %v", name, start, stop)
 		        sortedFiles = append(sortedFiles, name)
                 }
 	}
+	v(2, "Total number of files %v - Sliced number of files %v", len(t.files), len(sortedFiles))
 	// We guarantee elsewhere that filename ordering corresponds to creation ordering
 	sort.Strings(sortedFiles)
 	return sortedFiles
