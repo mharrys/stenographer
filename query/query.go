@@ -54,6 +54,8 @@ type Query interface {
 	// base returns whether this is a base query, hitting an indexfile directly,
 	// or an intersect/union set operation.
 	base() bool
+        // Get timespan i.e. first and last date in the query
+        GetTimeSpan(time.Time, time.Time) (time.Time, time.Time)
 }
 
 func log(q Query, i *indexfile.IndexFile, bp *base.Positions, err *error) func() {
@@ -84,6 +86,9 @@ func (q portQuery) LookupIn(ctx context.Context, index *indexfile.IndexFile) (bp
 }
 func (q portQuery) String() string { return fmt.Sprintf("port %d", q) }
 func (q portQuery) base() bool     { return true }
+func (q portQuery) GetTimeSpan(startTime time.Time, stopTime time.Time) (time.Time, time.Time) {
+        return startTime, stopTime
+}
 
 type vlanQuery uint16
 
@@ -93,6 +98,9 @@ func (q vlanQuery) LookupIn(ctx context.Context, index *indexfile.IndexFile) (bp
 }
 func (q vlanQuery) String() string { return fmt.Sprintf("vlan %d", q) }
 func (q vlanQuery) base() bool     { return true }
+func (q vlanQuery) GetTimeSpan(startTime time.Time, stopTime time.Time) (time.Time, time.Time) {
+        return startTime, stopTime
+}
 
 type mplsQuery uint32
 
@@ -102,6 +110,9 @@ func (q mplsQuery) LookupIn(ctx context.Context, index *indexfile.IndexFile) (bp
 }
 func (q mplsQuery) String() string { return fmt.Sprintf("mpls %d", q) }
 func (q mplsQuery) base() bool     { return true }
+func (q mplsQuery) GetTimeSpan(startTime time.Time, stopTime time.Time) (time.Time, time.Time) {
+        return startTime, stopTime
+}
 
 type protocolQuery byte
 
@@ -111,6 +122,9 @@ func (q protocolQuery) LookupIn(ctx context.Context, index *indexfile.IndexFile)
 }
 func (q protocolQuery) String() string { return fmt.Sprintf("ip proto %d", q) }
 func (q protocolQuery) base() bool     { return true }
+func (q protocolQuery) GetTimeSpan(startTime time.Time, stopTime time.Time) (time.Time, time.Time) {
+        return startTime, stopTime
+}
 
 type ipQuery [2]net.IP
 
@@ -120,6 +134,9 @@ func (q ipQuery) LookupIn(ctx context.Context, index *indexfile.IndexFile) (bp b
 }
 func (q ipQuery) String() string { return fmt.Sprintf("host %v-%v", q[0], q[1]) }
 func (q ipQuery) base() bool     { return true }
+func (q ipQuery) GetTimeSpan(startTime time.Time, stopTime time.Time) (time.Time, time.Time) {
+        return startTime, stopTime
+}
 
 type unionQuery []Query
 
@@ -143,6 +160,12 @@ func (a unionQuery) String() string {
 	return "(" + strings.Join(all, " or ") + ")"
 }
 func (a unionQuery) base() bool { return false }
+func (a unionQuery) GetTimeSpan(startTime time.Time, stopTime time.Time) (time.Time, time.Time) {
+	for _, query := range a {
+		startTime, stopTime = query.GetTimeSpan(startTime, stopTime)
+	}
+	return startTime, stopTime
+}
 
 type intersectQuery []Query
 
@@ -166,6 +189,12 @@ func (a intersectQuery) String() string {
 	return "(" + strings.Join(all, " and ") + ")"
 }
 func (a intersectQuery) base() bool { return false }
+func (a intersectQuery) GetTimeSpan(startTime time.Time, stopTime time.Time) (time.Time, time.Time) {
+	for _, query := range a {
+		startTime, stopTime = query.GetTimeSpan(startTime, stopTime)
+	}
+	return startTime, stopTime
+}
 
 type timeQuery [2]time.Time
 
@@ -215,6 +244,26 @@ func (a timeQuery) String() string {
 	return fmt.Sprintf("after %v", a[0].Format(time.RFC3339))
 }
 func (a timeQuery) base() bool { return true }
+func (a timeQuery) GetTimeSpan(startTime time.Time, stopTime time.Time) (time.Time, time.Time) {
+        // we do the same "trick" with subtracting/adding minute
+	// "after"
+	hasStartTime := !a[0].IsZero()
+	startTime2 := a[0].Add(-time.Minute)
+	// "before"
+	hasStopTime := !a[1].IsZero()
+	stopTime2 := a[1].Add(time.Minute)
+        if hasStartTime {
+                if startTime.IsZero() || startTime.After(startTime2) {
+                        startTime = startTime2
+                }
+        }
+        if hasStopTime {
+                if stopTime.IsZero() || stopTime.Before(stopTime2) {
+                        stopTime = stopTime2
+                }
+        }
+        return startTime, stopTime
+}
 
 // NewQuery parses the given query arg and returns a query object.
 // This query can then be passed into a blockfile to get out the set of packets

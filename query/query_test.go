@@ -16,6 +16,7 @@ package query
 
 import (
 	"testing"
+        "time"
 )
 
 func TestParsingValidQueries(t *testing.T) {
@@ -46,6 +47,9 @@ func TestParsingValidQueries(t *testing.T) {
 			t.Log(q)
 			t.Log(start)
 			t.Log(stop)
+                        start2, stop2 := q.GetTimeSpan(time.Time{}, time.Time{})
+                        t.Log(start2)
+                        t.Log(stop2)
 		}
 	}
 }
