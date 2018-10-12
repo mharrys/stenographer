@@ -207,7 +207,9 @@ func (a timeQuery) LookupIn(ctx context.Context, index *indexfile.IndexFile) (bp
 	return base.AllPositions, nil
 }
 func (a timeQuery) String() string {
-	if a[0].IsZero() {
+        if !a[0].IsZero() && !a[1].IsZero() {
+		return fmt.Sprintf("between %v and %v", a[0].Format(time.RFC3339), a[1].Format(time.RFC3339))
+        } else if a[0].IsZero() {
 		return fmt.Sprintf("before %v", a[1].Format(time.RFC3339))
 	}
 	return fmt.Sprintf("after %v", a[0].Format(time.RFC3339))
