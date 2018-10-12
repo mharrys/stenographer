@@ -41,15 +41,10 @@ func TestParsingValidQueries(t *testing.T) {
 		"between 2018-01-01T12:00:00Z and 2018-01-01T13:00:00Z",
 		"between 3h ago and 2h ago",
 	} {
-		if q, start, stop, err := NewQuery(test); err != nil {
+		if q, err := NewQuery(test); err != nil {
 			t.Fatalf("could not parse valid query %q: %v", test, err)
 		} else {
 			t.Log(q)
-			t.Log(start)
-			t.Log(stop)
-                        start2, stop2 := q.GetTimeSpan(time.Time{}, time.Time{})
-                        t.Log(start2)
-                        t.Log(stop2)
 		}
 	}
 }
@@ -66,7 +61,7 @@ func TestParsingInvalidQuery(t *testing.T) {
 		"between 2h ago and 3h ago",
 		"between 2018-01-01T13:00:00Z and 2018-01-01T12:00:00Z",
 	} {
-		if q, _, _, err := NewQuery(test); err == nil {
+		if q, err := NewQuery(test); err == nil {
 			t.Fatalf("parsed invalid query %q: %v", test, q)
 		} else {
 			t.Log(err)

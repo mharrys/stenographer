@@ -52,7 +52,7 @@ func TestPositions(t *testing.T) {
 		{"port 69", nil},
 	} {
 		// code to run single test
-		if q, _, _, err := query.NewQuery(test.query); err != nil {
+		if q, err := query.NewQuery(test.query); err != nil {
 			t.Fatal(err)
 		} else if got, err := blk.Positions(ctx, q); err != nil {
 			t.Fatal(err)

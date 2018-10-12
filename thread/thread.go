@@ -478,7 +478,7 @@ func (t *Thread) ExportDebugHandlers(mux *http.ServeMux) {
 			return
 		}
 		queryStr := string(queryBytes)
-		q, _, _, err := query.NewQuery(queryStr)
+		q, err := query.NewQuery(queryStr)
 		if err != nil {
 			http.Error(w, "could not parse query", http.StatusBadRequest)
 			return
