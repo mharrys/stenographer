@@ -214,7 +214,7 @@ func (t *Thread) cleanUpOnLowDiskSpace() {
 		// After deleting files, it may take a while for disk stats to be updated.
 		// We add this sleep so we don't accidentally delete WAY more files than
 		// we need to.
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(1 * time.Second)
 	}
 }
 
